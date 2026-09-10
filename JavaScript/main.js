@@ -3,6 +3,14 @@
 // Filtros, busca, ordenação, carrinho, pedidos e checkout
 // =====================================================
 
+
+// ==================== SUPABASE ====================
+
+const supabaseUrl = "https://afetosakzwxkfwwlgrty.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmZXRvc2Frend4a2Zmd2xncnR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NDAwNTMsImV4cCI6MjEwNDIxNjA1M30.P88ZNe2j0AwWUPfbSUJyG2VgMz-grapjrlILqgXeV9w";
+const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseAnonKey) : null;
+
+
 // ==================== DADOS DOS SERVIÇOS ====================
 
 const servicos = [
@@ -1060,12 +1068,146 @@ function inicializarEfeitosModernos() {
     window.addEventListener("resize", updateScrollState);
 }
 
+// ==================== CADASTRO ====================
+
+function formatarCpf(valor) {
+    const numeros = valor.replace(/\D/g, "").slice(0, 11);
+    if (numeros.length <= 3) return numeros;
+    if (numeros.length <= 6) return `${numeros.slice(0, 3)}.${numeros.slice(3)}`;
+    if (numeros.length <= 9) return `${numeros.slice(0, 3)}.${numeros.slice(3, 6)}.${numeros.slice(6)}`;
+    return `${numeros.slice(0, 3)}.${numeros.slice(3, 6)}.${numeros.slice(6, 9)}-${numeros.slice(9)}`;
+}
+
+function formatarTelefone(valor) {
+    const numeros = valor.replace(/\D/g, "").slice(0, 11);
+    if (numeros.length <= 2) return numeros;
+    if (numeros.length <= 7) return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+}
+
+function inicializarCadastro() {
+    const form = document.getElementById("form-cadastro");
+
+    if (!form) return;
+
+    const cpfInput = document.getElementById("cpf");
+    const telefoneInput = document.getElementById("telefone");
+
+    if (cpfInput) {
+        cpfInput.addEventListener("input", (event) => {
+            event.target.value = formatarCpf(event.target.value);
+        });
+    }
+
+    if (telefoneInput) {
+        telefoneInput.addEventListener("input", (event) => {
+            event.target.value = formatarTelefone(event.target.value);
+        });
+    }
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        if (!supabase) {
+            alert("Supabase não foi inicializado. Verifique a conexão.");
+            return;
+        }
+
+        const nome = document.getElementById("nome")?.value.trim();
+        const email = document.getElementById("email")?.value.trim();
+        const cpf = document.getElementById("cpf")?.value.trim();
+        const telefone = document.getElementById("telefone")?.value.trim();
+        const senha = document.getElementById("senha")?.value;
+
+        if (!nome || !email || !cpf || !telefone || !senha) {
+            alert("Preencha todos os campos do cadastro.");
+            return;
+        }
+
+        const cpfLimpo = cpf.replace(/\D/g, "");
+        const telefoneLimpo = telefone.replace(/\D/g, "");
+
+        if (cpfLimpo.length !== 11) {
+            alert("Informe um CPF válido.");
+            return;
+        }
+
+        if (telefoneLimpo.length < 10) {
+            alert("Informe um telefone válido.");
+            return;
+        }
+
+        if (senha.length < 6) {
+            alert("A senha deve ter pelo menos 6 caracteres.");
+            return;
+        }
+
+        const botao = form.querySelector("button[type='submit']");
+        if (botao) {
+            botao.disabled = true;
+            botao.textContent = "Cadastrando...";
+        }
+
+        try {
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password: senha,
+                options: {
+                    data: {
+                        nome,
+                        cpf: cpfLimpo,
+                        telefone: telefoneLimpo
+                    }
+                }
+            });
+
+            if (authError) throw authError;
+
+            const userId = authData?.user?.id;
+
+            if (userId) {
+                const { error: insertError } = await supabase
+                    .from("usuarios")
+                    .insert([
+                        {
+                            id: userId,
+                            nome,
+                            email,
+                            cpf: cpfLimpo,
+                            telefone: telefoneLimpo,
+                            created_at: new Date().toISOString()
+                        }
+                    ]);
+
+                if (insertError) {
+                    console.warn("Usuário criado no Auth, mas houve erro ao salvar no perfil:", insertError);
+                    throw insertError;
+                }
+            }
+
+            alert("Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.");
+            form.reset();
+            window.location.href = "index.html";
+        } catch (error) {
+            console.error("Erro no cadastro:", error);
+            alert(error?.message || "Não foi possível concluir o cadastro.");
+        } finally {
+            if (botao) {
+                botao.disabled = false;
+                botao.textContent = "Cadastrar";
+            }
+        }
+    });
+}
+
 // ==================== INICIALIZAÇÃO GERAL ====================
 
 document.addEventListener("DOMContentLoaded", function () {
+
     inicializarPaginaCompras();
     inicializarPaginaPedidos();
     inicializarCheckout();
     atualizarContadorCarrinho();
     inicializarEfeitosModernos();
+    inicializarCadastro();
 });
