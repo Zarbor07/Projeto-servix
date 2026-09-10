@@ -3,32 +3,6 @@
 // Filtros, busca, ordenação, carrinho, pedidos e checkout
 // =====================================================
 
-
-// ==================== SUPABASE ====================
-
-function obterVariavelAmbiente(nome) {
-    if (typeof window !== "undefined" && window[nome]) {
-        return window[nome];
-    }
-
-    if (typeof process !== "undefined" && process.env && process.env[nome]) {
-        return process.env[nome];
-    }
-
-    return "";
-}
-
-const supabaseUrl = obterVariavelAmbiente("SUPABASE_URL");
-const supabaseAnonKey = obterVariavelAmbiente("SUPABASE_ANON_KEY");
-const supabase = supabaseUrl && supabaseAnonKey && window.supabase
-    ? window.supabase.createClient(supabaseUrl, supabaseAnonKey)
-    : null;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Supabase: variáveis de ambiente ausentes. Defina SUPABASE_URL e SUPABASE_ANON_KEY antes de carregar o app.");
-}
-
-
 // ==================== DADOS DOS SERVIÇOS ====================
 
 const servicos = [
