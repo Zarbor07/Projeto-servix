@@ -1,3 +1,9 @@
+const supabaseUrl = window.__SERVIX_ENV__?.SUPABASE_URL;
+const supabaseAnonKey = window.__SERVIX_ENV__?.SUPABASE_ANON_KEY;
+const supabaseClient = window.supabase && supabaseUrl && supabaseAnonKey
+    ? window.supabase.createClient(supabaseUrl, supabaseAnonKey)
+    : null;
+
 // =====================================================
 // SERVIX - SCRIPT PRINCIPAL
 // Filtros, busca, ordenação, carrinho, pedidos e checkout
@@ -1100,7 +1106,7 @@ function inicializarCadastro() {
     form.addEventListener("submit", async function (event) {
         event.preventDefault();
 
-        if (!supabase) {
+        if (!supabaseClient) {
             alert("Supabase não foi inicializado. Verifique a conexão.");
             return;
         }
@@ -1141,7 +1147,7 @@ function inicializarCadastro() {
         }
 
         try {
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                 email,
                 password: senha,
                 options: {
@@ -1158,7 +1164,7 @@ function inicializarCadastro() {
             const userId = authData?.user?.id;
 
             if (userId) {
-                const { error: insertError } = await supabase
+                const { error: insertError } = await supabaseClient
                     .from("usuarios")
                     .insert([
                         {
